@@ -1,6 +1,6 @@
 /**
  * Motor control with speed and position PID control using quadrature encoder feedback.
- * こちらで公開されてぁE��モーター・ギヤボックスで速度・位置制御を行うサンプルコードです、E
+ * こちらで公開されている Nidec 24HBLDC用の QDDギヤを使用し、速度・位置制御を行うサンプルコードです。
  * https://suzu-mono-gram.com/blog/nidec-24h-motor-guide/
  */
 

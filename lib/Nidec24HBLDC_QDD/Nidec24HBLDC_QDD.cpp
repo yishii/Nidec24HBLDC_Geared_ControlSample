@@ -118,7 +118,7 @@ void Nidec24HBLDC_QDD::update() {
       pwm_cmd = constrain(static_cast<int>(round(out)), -255, 255);
 
       // 追加 : 静止摩擦を考慮した最低保持PWM値
-      constexpr int kMinHoldPwm = 20;  // 20等だとブルブルする場合がある
+      constexpr int kMinHoldPwm = 20;  // 調整 : モーター停止時にブルブルする場合はここの数値を大きくする (しょっちゅういじる場合はパラメータをライブラリの外に出そう)
       if (pwm_cmd > 0 && pwm_cmd < kMinHoldPwm) pwm_cmd = kMinHoldPwm;
       if (pwm_cmd < 0 && pwm_cmd > -kMinHoldPwm) pwm_cmd = -kMinHoldPwm;
       break;
