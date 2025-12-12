@@ -16,9 +16,18 @@ class Nidec24HBLDC_QDD {
 
  private:
   enum class Mode { kManual, kSpeed, kPosition };
+  static constexpr uint8_t kMaxInstances = 4;
+  static constexpr uint8_t kInvalidInstance = 0xFF;
 
-  static void handleEncoderA();
-  static void handleEncoderB();
+  static void dispatchEncoder(uint8_t idx);
+  static void handleEncoderA0();
+  static void handleEncoderA1();
+  static void handleEncoderA2();
+  static void handleEncoderA3();
+  static void handleEncoderB0();
+  static void handleEncoderB1();
+  static void handleEncoderB2();
+  static void handleEncoderB3();
   void updateEncoder();
   void drivePwm(int pwm);
 
@@ -27,6 +36,9 @@ class Nidec24HBLDC_QDD {
   int pin_dir_;
   int pin_enc_a_;
   int pin_enc_b_;
+  uint8_t instance_index_ = kInvalidInstance;
+  volatile long encoder_count_ = 0;
+  volatile int last_encoded_ = 0;
 
   Mode mode_ = Mode::kManual;
   float target_rpm_ = 0.0f;
@@ -41,7 +53,5 @@ class Nidec24HBLDC_QDD {
   uint32_t last_report_ms_ = 0;
   float last_reported_angle_deg_ = 0.0f;
 
-  static Nidec24HBLDC_QDD* instance_;
-  static volatile long encoder_count_;
-  static volatile int last_encoded_;
+  static Nidec24HBLDC_QDD* instances_[kMaxInstances];
 };

@@ -11,9 +11,7 @@ constexpr int kBrakeOn = LOW;
 constexpr int kBrakeOff = HIGH;
 }  // namespace
 
-Nidec24HBLDC_QDD* Nidec24HBLDC_QDD::instance_ = nullptr;
-volatile long Nidec24HBLDC_QDD::encoder_count_ = 0;
-volatile int Nidec24HBLDC_QDD::last_encoded_ = 0;
+Nidec24HBLDC_QDD* Nidec24HBLDC_QDD::instances_[kMaxInstances] = {nullptr};
 
 Nidec24HBLDC_QDD::Nidec24HBLDC_QDD(int pin_pwm, int pin_brake, int pin_dir,
                                    int pin_enc_a, int pin_enc_b)
@@ -34,11 +32,31 @@ void Nidec24HBLDC_QDD::begin() {
   analogWriteRange(255);    // 8bitレンジ
   drivePwm(0);
 
-  instance_ = this;
+  if (instance_index_ == kInvalidInstance) {
+    for (uint8_t i = 0; i < kMaxInstances; ++i) {
+      if (instances_[i] == nullptr) {
+        instances_[i] = this;
+        instance_index_ = i;
+        break;
+      }
+    }
+  }
+  if (instance_index_ == kInvalidInstance) {
+    Serial.println("Nidec24HBLDC_QDD: max instance count reached");
+    return;
+  }
+
   encoder_count_ = 0;
   last_encoded_ = (digitalRead(pin_enc_a_) << 1) | digitalRead(pin_enc_b_);
-  attachInterrupt(digitalPinToInterrupt(pin_enc_a_), handleEncoderA, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(pin_enc_b_), handleEncoderB, CHANGE);
+
+  static void (*const kHandleA[kMaxInstances])() = {
+      handleEncoderA0, handleEncoderA1, handleEncoderA2, handleEncoderA3};
+  static void (*const kHandleB[kMaxInstances])() = {
+      handleEncoderB0, handleEncoderB1, handleEncoderB2, handleEncoderB3};
+  attachInterrupt(digitalPinToInterrupt(pin_enc_a_),
+                  kHandleA[instance_index_], CHANGE);
+  attachInterrupt(digitalPinToInterrupt(pin_enc_b_),
+                  kHandleB[instance_index_], CHANGE);
 
   last_update_ms_ = millis();
   last_sample_count_ = 0;
@@ -152,13 +170,20 @@ void Nidec24HBLDC_QDD::update() {
   }
 }
 
-void Nidec24HBLDC_QDD::handleEncoderA() {
-  if (instance_) instance_->updateEncoder();
+void Nidec24HBLDC_QDD::dispatchEncoder(uint8_t idx) {
+  if (idx < kMaxInstances && instances_[idx]) {
+    instances_[idx]->updateEncoder();
+  }
 }
 
-void Nidec24HBLDC_QDD::handleEncoderB() {
-  if (instance_) instance_->updateEncoder();
-}
+void Nidec24HBLDC_QDD::handleEncoderA0() { dispatchEncoder(0); }
+void Nidec24HBLDC_QDD::handleEncoderA1() { dispatchEncoder(1); }
+void Nidec24HBLDC_QDD::handleEncoderA2() { dispatchEncoder(2); }
+void Nidec24HBLDC_QDD::handleEncoderA3() { dispatchEncoder(3); }
+void Nidec24HBLDC_QDD::handleEncoderB0() { dispatchEncoder(0); }
+void Nidec24HBLDC_QDD::handleEncoderB1() { dispatchEncoder(1); }
+void Nidec24HBLDC_QDD::handleEncoderB2() { dispatchEncoder(2); }
+void Nidec24HBLDC_QDD::handleEncoderB3() { dispatchEncoder(3); }
 
 // 割り込み側のクアドラチャ処理は最短限にしてCPU負荷を抑える
 void Nidec24HBLDC_QDD::updateEncoder() {
